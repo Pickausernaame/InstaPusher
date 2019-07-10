@@ -3,6 +3,7 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.firefox.options import Options as Firefox_Options
 from time import sleep
 import json
+from Printer import Printer
 
 user_agent = "Mozilla/5.0 (iPhone; U; CPU iPhone OS 3_0 like Mac OS X; en-us) AppleWebKit/528.18 (KHTML, like Gecko) Version/4.0 Mobile/7A341 Safari/528.16"
 
@@ -42,7 +43,7 @@ class InstaPusher:
         return str(current_url).split("/")[-2]
 
     def __authorization(self):
-        print("Start of authorization")
+        Printer.START("Start of authorization \n")
         self.__driver.get("http://www.instagram.com")
         sleep(2)
         self.__driver.find_element_by_link_text("Вход").click()
@@ -53,7 +54,8 @@ class InstaPusher:
         self.__isAuth = True
         self.nickname = self.__get_my_nickname()
         self.update_my_data()
-        print("Authorization is done. Hello, {}!".format(self.nickname))
+        Printer.OK("Authorization is done. Hello, {}!\n".format(self.nickname))
+
 
     def __get_account_data(self, nickname):
         self.__driver.get("http://www.instagram.com/{}/?__a=1".format(nickname))
@@ -66,20 +68,21 @@ class InstaPusher:
         self.followers_count = user_data["edge_followed_by"]["count"]
         self.following_count = user_data["edge_follow"]["count"]
 
-        print("Your id: ", self.__id)
-        print("Your followers count: ", self.followers_count)
-        print("Your following count: ", self.following_count)
+        print("Your id: {}".format(self.__id))
+        print("Your followers count: {}".format(self.followers_count))
+        print("Your following count: {}\n".format(self.following_count))
 
     def get_user_data(self, nickname):
+        Printer.START("Start of getting {}'s data\n".format(nickname))
         user_data = self.__get_account_data(nickname)
 
-        print("{}'s id: ".format(nickname), user_data["id"])
-        print("{}'s followers count: ".format(nickname), user_data["edge_followed_by"]["count"])
-        print("{}'s following count: ".format(nickname), user_data["edge_follow"]["count"])
+        print("{}'s id: {}".format(nickname, user_data["id"]))
+        print("{}'s followers count: {}".format(nickname, user_data["edge_followed_by"]["count"]))
+        print("{}'s following count: {}\n".format(nickname, user_data["edge_follow"]["count"]))
         return user_data
 
     def __get_account_following_set(self, id):
-        print("Start of getting following set")
+        Printer.START("Start of getting following set")
 
         variables = {}
         variables["id"] = id
@@ -109,7 +112,7 @@ class InstaPusher:
                 last_shot = True
             if last_shot:
                 break
-        print("Getting all fallowing set is complete")
+        Printer.OK("Getting all fallowing set is complete")
         all_following = set(all_following)
         return all_following
 
@@ -121,30 +124,25 @@ class InstaPusher:
     def get_my_following_set(self, save_to_file=False, filename="fallowing.txt"):
         all_following = self.__get_account_following_set(self.__id)
         if save_to_file:
-            print("Saving al fallowing in file")
-            with open(filename, "w") as f:
-                for user in all_following:
-                    f.write("http://www.instagram.com/{}/\n".format(user))
-            f.close()
-            print("Saving is complete")
+            InstaPusher.__save_to_file(all_following, filename)
         return all_following
 
     def unfollow(self, count):
-        print("Start of unfollow")
+        Printer.START("Start of unfollow")
         all_following = list(self.get_my_following_set())
         for user in all_following[:count]:
             self.__driver.get("http://www.instagram.com/{}/".format(user))
             self.__driver.find_element_by_css_selector("[aria-label='Подписки']").click()
             self.__driver.find_element_by_xpath("//button[text()='Отменить подписку']").click()
             print("User {} was unfollowed".format(user))
-        print("Unfollow complete")
+        Printer.OK("Unfollow complete")
         print("_________________________")
         self.update_my_data()
         print("_________________________")
         self.__driver.get("http://www.instagram.com/{}/".format(self.nickname))
 
     def __get_account_followers_set(self, id):
-        print("Start of getting followers")
+        Printer.START("Start of getting followers")
 
         variables = {}
         variables["id"] = id
@@ -164,7 +162,6 @@ class InstaPusher:
             else:
                 variables["after"] = page_info["end_cursor"]
             req_url = url + str(json.dumps(variables))
-            print(req_url)
             self.__driver.get(req_url)
             pre = self.__driver.find_element_by_tag_name("pre").text
             data = json.loads(pre)['data']
@@ -176,7 +173,7 @@ class InstaPusher:
                 last_shot = True
             if last_shot:
                 break
-        print("Getting all fallowing set is complete")
+        Printer.OK("Getting all fallowing set is complete")
         all_followers = set(all_followers)
         return all_followers
 
@@ -188,10 +185,14 @@ class InstaPusher:
     def get_my_followers_set(self, save_to_file=False, filename="followers.txt"):
         all_followers = self.__get_account_data(self.__id)
         if save_to_file:
-            print("Saving al fallowing in file")
-            with open(filename, "w") as f:
-                for user in all_followers:
-                    f.write("http://www.instagram.com/{}/\n".format(user))
-            f.close()
-            print("Saving is complete")
+            InstaPusher.__save_to_file(all_followers, filename)
         return all_followers
+
+    @staticmethod
+    def __save_to_file(data, filename):
+        Printer.START("Saving all fallowing in file")
+        with open(filename, "w") as f:
+            for unit in data:
+                f.write("http://www.instagram.com/{}/\n".format(unit))
+        f.close()
+        Printer.OK("Saving is complete")
